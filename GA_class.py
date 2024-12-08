@@ -79,7 +79,19 @@ class GA:
         return 1 / (1 + total_distance) # total distance inc. fitness dec.
 
 
+    def SelectParents(self,fitness_scores , population):
 
+        """
+            Select 2 parents using roulette-wheel selection
+        """
+
+        total_fitness = sum(fitness_scores)
+
+        probabilities = [score / total_fitness for score in fitness_scores]
+
+        return random.choices(population , weights=probabilities , k=2)
+    
+    
 
 
 ga_instance = GA(num_of_customers=5, customers= customers, num_vehicles=3, vehicle_capacity=20, depot_location=(0,0))
