@@ -42,8 +42,63 @@ class DifferentialEvolution:
                         routes[vehicle].append(customer)
                         assigned = True
             population.append(routes)
-
+    
         return population
+    
+    def fitness_function(self, routes):
+        """
+        Fitness function: Measures total distance of all routes in the population.
+        Lower distances are better.
+        """
+        total_distance = 0
+
+        for route in routes:
+            if len(route) == 0:  # Avoid empty routes
+                continue
+
+            # Start at the depot location
+            current_location = np.array(self.depot_location)
+            
+            for customer_id in route:
+                # Customer coordinates
+                customer_coords = np.array(self.customers[customer_id]['location'])
+                total_distance += np.linalg.norm(customer_coords - current_location)  # Distance to customer
+                current_location = customer_coords
+
+            # Return to the depot
+            total_distance += np.linalg.norm(current_location - np.array(self.depot_location))
+
+        return total_distance
+
+    def mutate(self, idx):
+
+        # Select three distinct individuals randomly
+        indices = list(range(len(self.population)))
+        indices.remove(idx)  # Exclude the index of the target individual
+        a, b, c = random.sample(indices, 3)  # Randomly select three distinct indices
+
+        # Create the mutant vector using DE mutation formula
+        mutant = []
+        for i in range(len(self.population[idx])):  # Iterate over all dimensions (routes or genes)
+            # Standard DE mutation formula: v_i = x_r1 + mutation_rate * (x_r2 - x_r3)
+            mutated_value = self.population[a][i] + self.mutation_rate * (self.population[b][i] - self.population[c][i])
+            mutant.append(mutated_value)
+
+        return mutant
+
+
+    def crossover(self, target, mutant):
+        """
+        Perform the crossover operation between the target solution and mutant.
+        """
+        offspring = []
+        for t, m in zip(target, mutant):
+            if random.random() < self.crossover_prob:
+                offspring.append(m)
+            else:
+                offspring.append(t)
+        return offspring
+
 
 if __name__ == "__main__":
     # Example input values
