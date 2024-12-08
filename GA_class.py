@@ -91,7 +91,43 @@ class GA:
 
         return random.choices(population , weights=probabilities , k=2)
     
+
+    def SingleEdgeCrossOver(self , parent1 , parent2):
+
+        """
+            Performs Single Edge CrossOver on 2 parents
+
+            Returns : 
+                2 offsprings solutions
+        """
+
+        split_points = random.randint(1, len(parent1[0]) - 1)
+
+        offspring1   = [parent1[0][:split_points] + parent2[0][split_points:]]
+        offspring2   = [parent2[0][:split_points] + parent2[0][split_points:]]
+
+        return offspring1 , offspring2
     
+
+    def swap_mutation(self , solution):
+
+        """
+            Perform swap mutation on a solution.
+            Returns:
+                Mutated solution.
+        """
+
+        for route in solution:
+
+            if len(route) > 1 :
+
+                idx1 , idx2 = random.sample(range(len(route)),2)
+
+                route[idx1] , route[idx2] = route[idx2] , route[idx1]
+
+        return solution
+    
+
 
 
 ga_instance = GA(num_of_customers=5, customers= customers, num_vehicles=3, vehicle_capacity=20, depot_location=(0,0))
