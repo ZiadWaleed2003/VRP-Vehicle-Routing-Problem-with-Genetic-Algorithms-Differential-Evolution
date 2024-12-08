@@ -79,6 +79,54 @@ class GA:
         return 1 / (1 + total_distance) # total distance inc. fitness dec.
 
 
+    def SelectParents(self,fitness_scores , population):
+
+        """
+            Select 2 parents using roulette-wheel selection
+        """
+
+        total_fitness = sum(fitness_scores)
+
+        probabilities = [score / total_fitness for score in fitness_scores]
+
+        return random.choices(population , weights=probabilities , k=2)
+    
+
+    def SingleEdgeCrossOver(self , parent1 , parent2):
+
+        """
+            Performs Single Edge CrossOver on 2 parents
+
+            Returns : 
+                2 offsprings solutions
+        """
+
+        split_points = random.randint(1, len(parent1[0]) - 1)
+
+        offspring1   = [parent1[0][:split_points] + parent2[0][split_points:]]
+        offspring2   = [parent2[0][:split_points] + parent2[0][split_points:]]
+
+        return offspring1 , offspring2
+    
+
+    def swap_mutation(self , solution):
+
+        """
+            Perform swap mutation on a solution.
+            Returns:
+                Mutated solution.
+        """
+
+        for route in solution:
+
+            if len(route) > 1 :
+
+                idx1 , idx2 = random.sample(range(len(route)),2)
+
+                route[idx1] , route[idx2] = route[idx2] , route[idx1]
+
+        return solution
+    
 
 
 
