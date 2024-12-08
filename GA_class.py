@@ -128,15 +128,25 @@ class GA:
         return solution
     
 
+    def Evolve(self):
+
+         """
+            Run the genetic algorithm for a specified number of generations.
+        Returns:
+            Best solution and its fitness.
+        """
+         
+    
 
 
-ga_instance = GA(num_of_customers=5, customers= customers, num_vehicles=3, vehicle_capacity=20, depot_location=(0,0))
+
+ga_instance = GA(num_of_customers=5, customers= customers, num_vehicles=3, vehicle_capacity=5, depot_location=(0,0))
 
 population, customer_demands = ga_instance.initialize_population()
 
 
 print(f"Population: {population}")
-print(f"Customer Demands: {customer_demands}")
+print(f"Customer Demands: {customer_demands}") 
 
 fitness = ga_instance.FitnessFunction(population[0])
 
