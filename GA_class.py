@@ -128,6 +128,32 @@ class GA:
         return solution
     
 
+    def replace_population_with_ellitism(self,old_gen , new_gen , depot , retain_fraction=0.1):
+
+        old_gen_scores = [self.FitnessFunction(solution) for solution in old_gen]
+        new_gen_scores = [self.FitnessFunction(solution) for solution in new_gen]
+
+        old_gen_sorted = sorted(zip(old_gen_scores , old_gen) , key=lambda x : x[0] , reverse=True)
+        new_gen_sorted = sorted(zip(new_gen_scores , new_gen) , key=lambda x : x[0] , reverse=True)
+
+
+        retain_count = int(len(old_gen) * retain_fraction)
+
+        # Keep the best solution from the old generation (elitism)
+
+        elite_solution = old_gen_sorted[0][1]
+
+        retained_individuals = [elite_solution] + [ind for _, ind in old_gen_sorted[1:retain_count]]
+
+        replacement_individuals = [ind for _, ind in new_gen_sorted[:len(old_gen) - retain_count - 1]]
+
+        combined_gen = retained_individuals + replacement_individuals
+
+        return combined_gen
+
+
+    
+
     def Evolve(self):
 
          """
