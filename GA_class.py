@@ -1,24 +1,6 @@
 import random 
 import numpy as np
 
-# idk if we are gonna use a DB or terminal this is a first draft anyways
-# num_customers = 10
-# max_vehicles = 5
-# min_demand = 1
-# max_demand = 8
-
-customers = {
-    1: (2, 3),
-    2: (5, 8),
-    3: (7, 2),
-    4: (4, 6),
-    5: (8, 3)
-}
-
-
-# population_size = 20
-# num_of_generations = 100
-# mutuation_rate = 0.1
 
 
 class GA:
@@ -92,21 +74,22 @@ class GA:
         return random.choices(population , weights=probabilities , k=2)
     
 
-    def SingleEdgeCrossOver(self , parent1 , parent2):
-
+    def SingleEdgeCrossOver(self, parent1, parent2):
         """
-            Performs Single Edge CrossOver on 2 parents
-
-            Returns : 
-                2 offsprings solutions
+        Performs Single Edge CrossOver on 2 parents.
+        Returns: 
+            2 offspring solutions.
         """
+        if len(parent1[0]) <= 1 or len(parent2[0]) <= 1:
+            # If either parent has an insufficient route, return the parents directly
+            return parent1, parent2
 
         split_points = random.randint(1, len(parent1[0]) - 1)
 
-        offspring1   = [parent1[0][:split_points] + parent2[0][split_points:]]
-        offspring2   = [parent2[0][:split_points] + parent2[0][split_points:]]
+        offspring1 = [parent1[0][:split_points] + parent2[0][split_points:]]
+        offspring2 = [parent2[0][:split_points] + parent1[0][split_points:]]
 
-        return offspring1 , offspring2
+        return offspring1, offspring2
     
 
     def swap_mutation(self , solution):
@@ -128,7 +111,7 @@ class GA:
         return solution
     
 
-    def replace_population_with_ellitism(self,old_gen , new_gen , depot , retain_fraction=0.1):
+    def replace_population_with_elitism(self,old_gen , new_gen , depot , retain_fraction=0.1):
 
         old_gen_scores = [self.FitnessFunction(solution) for solution in old_gen]
         new_gen_scores = [self.FitnessFunction(solution) for solution in new_gen]
@@ -155,26 +138,60 @@ class GA:
     
 
     def Evolve(self):
-
-         """
-            Run the genetic algorithm for a specified number of generations.
+        """
+        Run the genetic algorithm for a specified number of generations.
         Returns:
             Best solution and its fitness.
         """
-         
-    
+        
+        # initialzing the population 
+
+        population , customer_demands = self.initialize_population()
+
+        # getting the fitness score for the old gen
+
+        for gen in range(self.max_iter):
+
+            fitness_scores = [self.FitnessFunction(solution) for solution in population]
+
+            # Selecting Parents
+            new_population = []
+
+            for _ in range(self.population_size // 2): # halfsize cause we want to generate 2 offsprings per iteration
+
+                parent1 , parent2 = self.SelectParents(fitness_scores , population)
+
+                offspring1 , offspring2 = self.SingleEdgeCrossOver(parent1 , parent2)
+
+                # apply conditional mutation 
+                
+                if random.random() < self.mutation_rate:
+
+                    offspring1 = self.swap_mutation(offspring1)
+
+                if random.random() < self.mutation_rate:
+
+                    offspring2 = self.swap_mutation(offspring2)
 
 
+                # adding the new gen
 
-ga_instance = GA(num_of_customers=5, customers= customers, num_vehicles=3, vehicle_capacity=5, depot_location=(0,0))
+                new_population.extend([offspring1 , offspring2])
 
-population, customer_demands = ga_instance.initialize_population()
+            
+            # replace the old gen with the new gen using elitism
+
+            population = self.replace_population_with_elitism(population , new_population , self.depot_location)
+
+            best_fitness = max([self.FitnessFunction(solution) for solution in population])
+
+            print(f"Generation {gen+1}, Best Fitness: {best_fitness}")
 
 
-print(f"Population: {population}")
-print(f"Customer Demands: {customer_demands}") 
+        # return the best solution
 
-fitness = ga_instance.FitnessFunction(population[0])
+        best_solution = max(population , key=self.FitnessFunction)
 
-print(f"Fitness of first solution is : ", fitness)
+        return best_solution , self.FitnessFunction(best_solution)    
+
 
