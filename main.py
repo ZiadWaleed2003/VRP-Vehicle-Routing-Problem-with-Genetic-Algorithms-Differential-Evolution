@@ -1,11 +1,8 @@
 from GA_class import GA
+import random
+import numpy as np
 
-# idk if we are gonna use a DB or terminal this is a first draft anyways
-# num_customers = 10
-# max_vehicles = 5
-# min_demand = 1
-# max_demand = 8
-
+# Test Data
 customers = {
     1: (2, 3),
     2: (5, 8),
@@ -19,17 +16,37 @@ customers = {
     10: (16, 4),
 }
 
+# Hardcoded customer demands (for now)
+customer_demands = {
+    1: 5,
+    2: 3,
+    3: 6,
+    4: 2,
+    5: 8,
+    6: 4,
+    7: 7,
+    8: 3,
+    9: 5,
+    10: 6,
+}
 
-# population_size = 20
-# num_of_generations = 100
-# mutuation_rate = 0.1
+# Random seed for reproducibility
+random.seed(42)
+np.random.seed(42)
 
+# Initialize the GA
+ga = GA(
+    num_of_customers=len(customers),
+    customers=customers,
+    num_vehicles=5,
+    vehicle_capacity=8,  # Adjusted to match potential demands
+    depot_location=(0, 0),
+    customer_demands= customer_demands
+)
 
+# Run the algorithm
+best_solution, fitness_score = ga.evolve()
 
-ga = GA(num_of_customers=len(customers), customers= customers, num_vehicles=5, vehicle_capacity=4, depot_location=(0,0))
-
-best_solution , fitness_score = ga.Evolve()
-
-
-print(f"Best solution is {best_solution}")
-print(f"fitness scoree is {fitness_score}")
+# Print the best solution and its fitness
+print(f"Best solution is: {best_solution}")
+print(f"Fitness score is: {fitness_score}")
