@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from GA_class import GA
 import random
 import numpy as np
@@ -50,3 +51,13 @@ best_solution, fitness_score = ga.evolve()
 # Print the best solution and its fitness
 print(f"Best solution is: {best_solution}")
 print(f"Fitness score is: {fitness_score}")
+
+
+
+for route in best_solution:
+    x, y = [customers[c][0] for c in route], [customers[c][1] for c in route]
+    plt.plot([0] + x + [0], [0] + y + [0], marker='o', label=f"Route {route}")
+
+plt.legend()
+plt.title("Vehicle Routes")
+plt.show()
