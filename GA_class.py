@@ -2,7 +2,7 @@ import random
 import numpy as np
 
 class GA:
-    def __init__(self, num_of_customers, customers, num_vehicles, vehicle_capacity, depot_location, customer_demands=None , population_size = 50 , max_iter=100 , mutation_rate = 0.5):
+    def __init__(self, num_of_customers, customers, num_vehicles, vehicle_capacity, early_stop,depot_location, customer_demands=None , population_size = 10 , max_iter=100 , mutation_rate = 0.5 ):
         # Initialize the GA object with the given parameters
         self.num_of_customers = num_of_customers
         self.customers = customers
@@ -12,6 +12,7 @@ class GA:
         self.population_size = population_size
         self.max_iter = max_iter
         self.mutation_rate = mutation_rate
+        self.early_stop = early_stop
         
         # Use the user-provided customer_demands if available
         if customer_demands is not None:
@@ -25,7 +26,7 @@ class GA:
     def initialize_population(self):
         """
         Initializes the population by randomly generating feasible solutions.
-        
+
         Each solution is a list of routes, where each route represents the customers served by a vehicle.
         
         Returns:
@@ -35,24 +36,40 @@ class GA:
 
         for _ in range(self.population_size):
             solution = []  # Routes of each vehicle
-            available_customers = list(range(1, self.num_of_customers + 1))  # Customers yet to be assigned
+            available_customers = list(range(1, self.num_of_customers + 1))  # Customer IDs start from 1 to num_of_customers
+            random.shuffle(available_customers)  # Shuffle to ensure randomization
+            
+            # Create empty routes for each vehicle
+            vehicle_routes = [[] for _ in range(self.num_vehicles)]
+            vehicle_loads = [0] * self.num_vehicles  # Keeps track of total demand on each vehicle
 
-            # Randomly assign customers to vehicles
-            for _ in range(self.num_vehicles):
-                if not available_customers:
-                    break
-                num_customers_in_vehicle = random.randint(1, len(available_customers))
-                route = random.sample(available_customers, num_customers_in_vehicle)
-                available_customers = [cx for cx in available_customers if cx not in route]
-                solution.append(route)
+            # **Step 1**: Distribute customers while respecting vehicle capacity
+            for customer in available_customers:
+                customer_demand = self.customer_demands[customer]
+                
+                # Find vehicles that have enough capacity to add this customer
+                feasible_vehicles = [i for i in range(self.num_vehicles) if vehicle_loads[i] + customer_demand <= self.vehicle_capacity]
+                
+                if feasible_vehicles:  # If there are feasible vehicles, randomly pick one
+                    selected_vehicle = random.choice(feasible_vehicles)
+                    vehicle_routes[selected_vehicle].append(customer)
+                    vehicle_loads[selected_vehicle] += customer_demand
+                else:
+                    # **Handle Leftover Customer**: No vehicle has space for this customer, add them to the vehicle with the smallest load
+                    min_load_vehicle = min(range(self.num_vehicles), key=lambda i: vehicle_loads[i])
+                    vehicle_routes[min_load_vehicle].append(customer)
+                    vehicle_loads[min_load_vehicle] += customer_demand
 
-            # If there are still unassigned customers, add them to the last vehicle's route
-            if available_customers:
-                solution[-1].extend(available_customers)
+            # **Step 2**: Ensure that no customers are missing or duplicated
+            all_customers_assigned = [c for route in vehicle_routes for c in route]
+            if len(set(all_customers_assigned)) != self.num_of_customers:
+                raise ValueError(f"Some customers were not assigned or were duplicated in routes. Assigned: {set(all_customers_assigned)}")
 
+            solution.extend(vehicle_routes)
             population.append(solution)
 
         return population
+
 
     def calculate_distance(self, route):
         """
@@ -93,7 +110,7 @@ class GA:
 
             # Penalize routes that exceed the vehicle's capacity
             if sum(customer_demands[c] for c in route) > self.vehicle_capacity:
-                total_distance += 1000  # Large penalty for infeasibility
+                total_distance += 100  # Large penalty for infeasibility
 
         return 1 / (1 + total_distance)  # Invert distance for maximization
 
@@ -215,6 +232,12 @@ class GA:
         # Initialize population and customer demands
         population = self.initialize_population()
 
+        best_fitness = float('-inf')  # Track the best fitness score
+        best_gen = None
+        no_improvement_counter = 0  # Counter to track generations without improvement
+        fitness_collec = []
+        pop_collec = []
+
         for gen in range(self.max_iter):
             fitness_scores = [self.fitness_function(sol, self.customer_demands) for sol in population]
             new_population = []
@@ -237,11 +260,37 @@ class GA:
             unique_population = list({str(sol): sol for sol in new_population}.values())
             population = unique_population[:self.population_size]
 
-            best_fitness = max([self.fitness_function(sol, self.customer_demands) for sol in population])
-            print(f"Generation {gen + 1}, Best Fitness: {best_fitness}")
+            current_fitness = max([self.fitness_function(sol, self.customer_demands) for sol in population])
+            print(f"Generation {gen + 1}, Best Fitness: {current_fitness}")
 
-        best_solution = max(population, key=lambda sol: self.fitness_function(sol, self.customer_demands))
-        return best_solution, self.fitness_function(best_solution, self.customer_demands)
+            pop_collec.append(population)
+            fitness_collec.append(current_fitness)
+
+            if current_fitness > best_fitness:
+
+                best_fitness = current_fitness # change the best fitness to the current one
+                best_gen     = population
+                no_improvement_counter = 0  # reset the counter
+
+            else:
+                no_improvement_counter += 1 # increment the counter
+
+            
+            if no_improvement_counter >= self.early_stop:
+
+                print(f"Early stopping at generation {gen + 1} due to no improvement.")
+        
+                break
+
+
+
+        idx = fitness_collec.index(max(fitness_collec))
+        best_gen = pop_collec[idx]
+        best_fitness = fitness_collec[idx]
+
+        best_solution = max(best_gen, key=lambda sol: self.fitness_function(sol, self.customer_demands))
+
+        return best_solution , best_fitness , idx
 
 
 

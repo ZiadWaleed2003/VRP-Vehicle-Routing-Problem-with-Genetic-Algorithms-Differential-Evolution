@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from GA_class import GA
 import random
 import numpy as np
@@ -41,12 +42,26 @@ ga = GA(
     num_vehicles=5,
     vehicle_capacity=8,  # Adjusted to match potential demands
     depot_location=(0, 0),
-    customer_demands= customer_demands
+    customer_demands= customer_demands,
+    population_size=5,
+    max_iter=100,
+    mutation_rate=0.3,
+    early_stop=5
 )
 
-# Run the algorithm
-best_solution, fitness_score = ga.evolve()
+best_solution_large, best_fitness_large , idx = ga.evolve()
 
-# Print the best solution and its fitness
-print(f"Best solution is: {best_solution}")
-print(f"Fitness score is: {fitness_score}")
+
+# Output results
+print(f"Best Solution (Large) : {best_solution_large}")
+print(f"Best Fitness (Large) at {idx+1}:  {best_fitness_large}")
+
+
+plt.figure(figsize=(10,10))
+for route in best_solution_large:
+    x, y = [customers[c][0] for c in route], [customers[c][1] for c in route]
+    plt.plot([0] + x + [0], [0] + y + [0], marker='o', label=f"Route {route}")
+
+plt.legend(loc='upper left')
+plt.title("Vehicle Routes")
+plt.show()
