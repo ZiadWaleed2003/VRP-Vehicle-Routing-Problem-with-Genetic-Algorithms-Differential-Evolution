@@ -2,7 +2,7 @@ import random
 import numpy as np
 
 class GA:
-    def __init__(self, num_of_customers, customers, num_vehicles, vehicle_capacity, depot_location, customer_demands=None , population_size = 10 , max_iter=100 , mutation_rate = 0.5):
+    def __init__(self, num_of_customers, customers, num_vehicles, vehicle_capacity, early_stop,depot_location, customer_demands=None , population_size = 10 , max_iter=100 , mutation_rate = 0.5 ):
         # Initialize the GA object with the given parameters
         self.num_of_customers = num_of_customers
         self.customers = customers
@@ -12,6 +12,7 @@ class GA:
         self.population_size = population_size
         self.max_iter = max_iter
         self.mutation_rate = mutation_rate
+        self.early_stop = early_stop
         
         # Use the user-provided customer_demands if available
         if customer_demands is not None:
@@ -109,7 +110,7 @@ class GA:
 
             # Penalize routes that exceed the vehicle's capacity
             if sum(customer_demands[c] for c in route) > self.vehicle_capacity:
-                total_distance += 1000  # Large penalty for infeasibility
+                total_distance += 100  # Large penalty for infeasibility
 
         return 1 / (1 + total_distance)  # Invert distance for maximization
 
@@ -231,6 +232,12 @@ class GA:
         # Initialize population and customer demands
         population = self.initialize_population()
 
+        best_fitness = float('-inf')  # Track the best fitness score
+        best_gen = None
+        no_improvement_counter = 0  # Counter to track generations without improvement
+        fitness_collec = []
+        pop_collec = []
+
         for gen in range(self.max_iter):
             fitness_scores = [self.fitness_function(sol, self.customer_demands) for sol in population]
             new_population = []
@@ -253,11 +260,37 @@ class GA:
             unique_population = list({str(sol): sol for sol in new_population}.values())
             population = unique_population[:self.population_size]
 
-            best_fitness = max([self.fitness_function(sol, self.customer_demands) for sol in population])
-            print(f"Generation {gen + 1}, Best Fitness: {best_fitness}")
+            current_fitness = max([self.fitness_function(sol, self.customer_demands) for sol in population])
+            print(f"Generation {gen + 1}, Best Fitness: {current_fitness}")
 
-        best_solution = max(population, key=lambda sol: self.fitness_function(sol, self.customer_demands))
-        return best_solution, self.fitness_function(best_solution, self.customer_demands)
+            pop_collec.append(population)
+            fitness_collec.append(current_fitness)
+
+            if current_fitness > best_fitness:
+
+                best_fitness = current_fitness # change the best fitness to the current one
+                best_gen     = population
+                no_improvement_counter = 0  # reset the counter
+
+            else:
+                no_improvement_counter += 1 # increment the counter
+
+            
+            if no_improvement_counter >= self.early_stop:
+
+                print(f"Early stopping at generation {gen + 1} due to no improvement.")
+        
+                break
+
+
+
+        idx = fitness_collec.index(max(fitness_collec))
+        best_gen = pop_collec[idx]
+        best_fitness = fitness_collec[idx]
+
+        # best_solution = max(best_gen, key=lambda sol: self.fitness_function(sol, self.customer_demands))
+
+        return best_gen , best_fitness , idx
 
 
 

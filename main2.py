@@ -21,21 +21,28 @@ ga_large = GA(
     customer_demands=customer_demands,
     population_size=30,
     max_iter=100,
-    mutation_rate=0.3
+    mutation_rate=0.3,
+    early_stop=10
 )
 
-best_solution_large, best_fitness_large = ga_large.evolve()
+best_solution_large, best_fitness_large , idx = ga_large.evolve()
 
 # Output results
-print("Best Solution (Large):", best_solution_large)
-print("Best Fitness (Large):", best_fitness_large)
+print(f"Best Solution (Large) : {best_solution_large}")
+print(f"Best Fitness (Large) at {idx+1}:  {best_fitness_large}")
 
 
 plt.figure(figsize=(10,10))
 for route in best_solution_large:
-    x, y = [customers[c][0] for c in route], [customers[c][1] for c in route]
-    plt.plot([0] + x + [0], [0] + y + [0], marker='o', label=f"Route {route}")
+    # Ensure route is a flat list of customer indices
+    if isinstance(route, list):  # Check if 'route' is a list of lists
+        for sub_route in route:
+            x, y = [customers[c][0] for c in sub_route], [customers[c][1] for c in sub_route]
+            plt.plot([0] + x + [0], [0] + y + [0], marker='o', label=f"Route {route}")
+    else:
+        x, y = [customers[c][0] for c in route], [customers[c][1] for c in route]
+        plt.plot([0] + x + [0], [0] + y + [0], marker='o', label=f"Route {route}")
 
-plt.legend(loc='upper left')
+plt.legend(loc='upper left' , fontsize=5)
 plt.title("Vehicle Routes")
 plt.show()
