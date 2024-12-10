@@ -34,15 +34,9 @@ print(f"Best Fitness (Large) at {idx+1}:  {best_fitness_large}")
 
 plt.figure(figsize=(10,10))
 for route in best_solution_large:
-    # Ensure route is a flat list of customer indices
-    if isinstance(route, list):  # Check if 'route' is a list of lists
-        for sub_route in route:
-            x, y = [customers[c][0] for c in sub_route], [customers[c][1] for c in sub_route]
-            plt.plot([0] + x + [0], [0] + y + [0], marker='o', label=f"Route {route}")
-    else:
-        x, y = [customers[c][0] for c in route], [customers[c][1] for c in route]
-        plt.plot([0] + x + [0], [0] + y + [0], marker='o', label=f"Route {route}")
+    x, y = [customers[c][0] for c in route], [customers[c][1] for c in route]
+    plt.plot([0] + x + [0], [0] + y + [0], marker='o', label=f"Route {route}")
 
-plt.legend(loc='upper left' , fontsize=5)
+plt.legend(loc='upper left')
 plt.title("Vehicle Routes")
 plt.show()

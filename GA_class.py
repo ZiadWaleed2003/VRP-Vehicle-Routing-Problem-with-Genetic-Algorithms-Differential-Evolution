@@ -288,9 +288,9 @@ class GA:
         best_gen = pop_collec[idx]
         best_fitness = fitness_collec[idx]
 
-        # best_solution = max(best_gen, key=lambda sol: self.fitness_function(sol, self.customer_demands))
+        best_solution = max(best_gen, key=lambda sol: self.fitness_function(sol, self.customer_demands))
 
-        return best_gen , best_fitness , idx
+        return best_solution , best_fitness , idx
 
 
 
