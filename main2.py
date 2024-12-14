@@ -4,6 +4,7 @@ import numpy as np
 from GA_class import GA
 import matplotlib.pyplot as plt
 
+
 num_customers = 50
 customers = {i: (random.randint(0, 100), random.randint(0, 100)) for i in range(1, num_customers + 1)}
 customer_demands = {i: random.randint(1, 10) for i in range(1, num_customers + 1)}
