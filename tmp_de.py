@@ -1,28 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# # Define problem parameters
-NUM_CUSTOMERS = 5 # Number of customers minus the depot
-NUM_VEHICLES = 3
-CAPACITY = 9
-DE_POPULATION_SIZE = 3
-DE_MAX_GENERATIONS = 20
-DE_CR = 0.5
-DE_F = 0.5
-
-# # Generate random customer demands
-np.random.seed(42)
-customer_demands = np.random.randint(1, 3, size=NUM_CUSTOMERS)
-customer_demands = np.concatenate(([0], customer_demands))
-print('Customer Demands: ', customer_demands)
-
-# # Define distance matrix
-locations = np.random.rand(NUM_CUSTOMERS + 1, 2)
-distances = np.zeros((NUM_CUSTOMERS + 1, NUM_CUSTOMERS + 1))
-for i in range(NUM_CUSTOMERS + 1):
-    for j in range(i + 1, NUM_CUSTOMERS + 1):
-        distances[i, j] = np.linalg.norm(locations[i] - locations[j])
-        distances[j, i] = distances[i, j]
 
 def check_validity(trial_solution, customer_demands):
     valid_solution = 0
@@ -90,9 +68,6 @@ def fitness(solution, distances, customer_demands):
 
     return total_distance
 
-solution = np.array([0, 5, 1, 0, 2, 0, 4, 3, 0])
-total_distance = fitness(solution, distances, customer_demands)
-print('The total distance is: ', total_distance)
 
 def generate_population(population_size):
     # # Generate random population, where each individual is a list of customer IDs
@@ -193,6 +168,36 @@ def differential_evolution(fitness_fn, population_size, max_generations, crossov
                 print(f"Generation {i + 1}/{max_generations}: Best fitness = {best_fitness}")
 
     return best_solution, best_fitness, fitness_history
+
+
+
+# # Define problem parameters
+NUM_CUSTOMERS = 5 # Number of customers minus the depot
+NUM_VEHICLES = 3
+CAPACITY = 9
+DE_POPULATION_SIZE = 3
+DE_MAX_GENERATIONS = 20
+DE_CR = 0.5
+DE_F = 0.5
+
+# # Generate random customer demands
+np.random.seed(42)
+customer_demands = np.random.randint(1, 3, size=NUM_CUSTOMERS)
+customer_demands = np.concatenate(([0], customer_demands))
+print('Customer Demands: ', customer_demands)
+
+# # Define distance matrix
+locations = np.random.rand(NUM_CUSTOMERS + 1, 2)
+distances = np.zeros((NUM_CUSTOMERS + 1, NUM_CUSTOMERS + 1))
+for i in range(NUM_CUSTOMERS + 1):
+    for j in range(i + 1, NUM_CUSTOMERS + 1):
+        distances[i, j] = np.linalg.norm(locations[i] - locations[j])
+        distances[j, i] = distances[i, j]
+
+
+solution = np.array([0, 5, 1, 0, 2, 0, 4, 3, 0])
+total_distance = fitness(solution, distances, customer_demands)
+print('The total distance is: ', total_distance)
 
 # # Run Differential Evolution algorithm
 best_solution, best_fitness, fitness_history = differential_evolution(
