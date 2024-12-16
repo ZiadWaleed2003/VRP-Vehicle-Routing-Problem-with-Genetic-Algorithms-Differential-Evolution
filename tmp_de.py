@@ -221,3 +221,68 @@ plt.xlabel("Generation")
 plt.ylabel("Fitness")
 plt.title("Fitness History")
 plt.show()
+
+
+######################################
+## Graphical representation 
+######################################
+
+import matplotlib as mpl
+from matplotlib.patches import Patch
+
+def plot_cvrp_solution(locations, solution):
+    
+    # # Define a color map to use for the routes
+    cmap = mpl.colormaps['hsv']
+
+    # # Create a dictionary to store the colors for each route
+    color_dict = {}
+    
+    # # Create a plot and set the plot size
+    fig, ax = plt.subplots(figsize=(10, 10))
+    
+    # # Plot the customer locations
+    ax.scatter([loc[0] for loc in locations], [loc[1] for loc in locations], s=100, color='black')
+
+    # # Get the solution vehicle routes
+    routes = np.split(solution, np.where(solution == 0)[0])
+    routes.pop(0)
+    routes.pop(-1)
+    
+    # # Plot the solution routes
+    for i in range(len(routes)):
+        route = routes[i]
+        route = np.concatenate((route, [0]))
+
+        color = cmap(i / len(routes))
+        
+        # # Create a line plot for the route
+        ax.plot([locations[x][0] for x in route], [locations[x][1] for x in route], color=color, linewidth=3, label=f'Vehicle {i}')
+
+        color_dict[f"Route {i}"] = color
+        
+    
+    # # Set the axis limits and labels
+    ax.set_xlim([0, max([loc[0] for loc in locations]) * 1.1])
+    ax.set_ylim([0, max([loc[1] for loc in locations]) * 1.1])
+    ax.set_xlabel('X Coordinate')
+    ax.set_ylabel('Y Coordinate')
+    
+    # # Set the title
+    ax.set_title(f'CVRP Solution ({NUM_VEHICLES} Vehicles, Capacity {CAPACITY})')
+
+    # # Create a legend for the solution routes
+    legend_handles = [Patch(facecolor=color_dict[label], label=label) for label in color_dict.keys()]
+
+    # # Define the coordinates for the legend box
+    legend_x = 1
+    legend_y = 0.5
+    
+    # # Place the legend box outside of the graph area
+    plt.legend(handles=legend_handles, bbox_to_anchor=(legend_x, legend_y), loc='center left', title='Routes')
+    
+    # # Show the plot
+    plt.show()
+
+# # Plot graph with solution
+plot_cvrp_solution(locations, best_solution)
