@@ -1,8 +1,9 @@
 import random
 import numpy as np
-
+random.seed(42)
+np.random.seed(42)
 class GA:
-    def __init__(self, num_of_customers, customers, num_vehicles, vehicle_capacity, early_stop,depot_location, customer_demands=None , population_size = 10 , max_iter=100 , mutation_rate = 0.5 ):
+    def __init__(self, num_of_customers, customers, num_vehicles, vehicle_capacity, early_stop,depot_location, customer_demands=None , population_size = 30 , max_iter=150 , mutation_rate = 0.5 ):
         # Initialize the GA object with the given parameters
         self.num_of_customers = num_of_customers
         self.customers = customers

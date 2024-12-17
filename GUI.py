@@ -2,6 +2,10 @@ from tkinter import Tk, Label, Entry, Button, Radiobutton, IntVar, Frame, messag
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import numpy as np
+from GA_class import GA
+import random
+
+
 
 class VehicleRoutingOptimizer:
     def __init__(self, root):
@@ -10,6 +14,7 @@ class VehicleRoutingOptimizer:
         self.app.title("Vehicle Routing Problem Optimization")
         self.app.resizable(False, False)
         self.app.configure(bg="#0E0E0E")
+        self.algo_selected = None
 
         # Set up layout frames
         self.left_frame = Frame(self.app, width=1100, height=900, bg="#1E1E1E")
@@ -45,15 +50,23 @@ class VehicleRoutingOptimizer:
         # Add input widgets to the right frame
         self.create_input_widgets()
 
+    def GA_selected(self):
+        self.algo_selected = 'GA'
+        print("GA is selected")
+
+    def DE_selected(self):
+        self.algo_selected = 'DE'
+        print("DE is selected")
+
     def create_input_widgets(self):
         # Algorithm Selection
         algorithm_label = Label(self.right_frame, text="Algorithm", bg="#1E1E1E", fg="white", font=("Helvetica", 14))
         algorithm_label.pack(pady=(20, 10))
         self.selected_algorithm = IntVar()
         ga_radio = Radiobutton(self.right_frame, text="Genetic Algorithm", variable=self.selected_algorithm, value=1, 
-                                bg="#1E1E1E", fg="white", selectcolor="#1E1E1E", font=("Helvetica", 12))
+                                bg="#1E1E1E", fg="white", selectcolor="#1E1E1E", font=("Helvetica", 12) , command=self.GA_selected)
         ga_radio.pack(pady=10)
-        de_radio = Radiobutton(self.right_frame, text="Differential Evolution", variable=self.selected_algorithm, value=2, 
+        de_radio = Radiobutton(self.right_frame, text="Differential Evolution", variable=self.selected_algorithm, value=2, command=self.DE_selected ,  
                                 bg="#1E1E1E", fg="white", selectcolor="#1E1E1E", font=("Helvetica", 12))
         de_radio.pack(pady=10)
 
@@ -81,12 +94,18 @@ class VehicleRoutingOptimizer:
                             activeforeground="white", font=("Helvetica", 14), width=20, height=2)
         run_button.pack(pady=(30, 20))
 
+    # def generate_random_data(self, num_customers):
+    #     customers = {i: (random.randint(0, 100), random.randint(0, 100)) for i in range(1, num_customers + 1)}
+    #     customer_demands = {i: random.randint(1, 10) for i in range(1, num_customers + 1)}
+
+    #     return customers, customer_demands
+
     def run_optimization(self):
         # Validate inputs
         try:
             num_customers = int(self.entries["Number of customers"].get())
             num_vehicles = int(self.entries["Number of vehicles"].get())
-            vehicle_capacity = float(self.entries["Vehicles Capacity"].get())
+            vehicle_capacity = int(self.entries["Vehicles Capacity"].get())
             depot_location = list(map(float, self.entries["Depot Location"].get().split(',')))
             mutation_rate = float(self.entries["Mutation Rate"].get())
             early_stopping = int(self.entries["Early Stopping"].get())
@@ -94,45 +113,60 @@ class VehicleRoutingOptimizer:
             messagebox.showerror("Input Error", "Please enter valid numeric values")
             return
 
-        # Placeholder optimization result
-        best_solution = [
-            [1, 3, 5],  # Route 1
-            [2, 4]      # Route 2
-        ]
+        # # Placeholder optimization result
+        # best_solution = [
+        #     [1, 3, 5],  # Route 1
+        #     [2, 4]      # Route 2
+        # ]
+        
+        # cst , cst_demands = self.generate_random_data(num_customers)
+        random.seed(42)
+        np.random.seed(42)
 
-        # Plot the routes
-        self.plot_routes(best_solution)
+        if self.algo_selected == 'GA':
 
-    def plot_routes(self, routes):
+            
+           
+            customers = {i: (random.randint(0, 100), random.randint(0, 100)) for i in range(1, num_customers + 1)}
+            customer_demands = {i: random.randint(1, 10) for i in range(1, num_customers + 1)}
+        
+            ga = GA(
+                num_of_customers = num_customers,
+                customers = customers,
+                num_vehicles = num_vehicles,
+                vehicle_capacity = vehicle_capacity,
+                depot_location = depot_location,
+                customer_demands = customer_demands,
+                mutation_rate = mutation_rate,
+                early_stop = early_stopping
+            )
+                
+            best_sol , best_fitness , idx = ga.evolve()
+
+            # Plot the routes
+            self.plot_routes(best_sol , customers=customers)
+        else:
+            # DE main function here
+            print('Place holder')
+
+
+    def plot_routes(self, routes , customers):
         # Clear previous plot
         self.ax.clear()
         self.ax.set_title("Vehicle Routes", color="black", fontsize=16)
         self.ax.set_facecolor("white")
         self.ax.tick_params(colors="black")
 
-        # Color palette for routes
-        colors = ['blue', 'orange', 'green', 'red', 'purple']
-
-        # Plot each route
-        for i, route in enumerate(routes):
-            # Get x and y coordinates for the route, including depot at start and end
-            x = [self.depot[0]] + [self.customers[c][0] for c in route] + [self.depot[0]]
-            y = [self.depot[1]] + [self.customers[c][1] for c in route] + [self.depot[1]]
-            
-            # Plot the route
-            self.ax.plot(x, y, marker='o', color=colors[i % len(colors)], 
-                         linewidth=2, label=f"Route {i+1}")
-            
-            # Plot customer points
-            self.ax.scatter([self.customers[c][0] for c in route], 
-                            [self.customers[c][1] for c in route], 
-                            color=colors[i % len(colors)], s=100)
+        plt.figure(figsize=(10,10))
+        for route in routes:
+            x, y = [customers[c][0] for c in route], [customers[c][1] for c in route]
+            self.ax.plot([0] + x + [0], [0] + y + [0], marker='o', label=f"Route {route}")
 
         # Plot depot
         self.ax.scatter(self.depot[0], self.depot[1], color='red', s=200, marker='s', label='Depot')
 
         # Customize the plot
-        self.ax.legend(facecolor="white", edgecolor="black", labelcolor="black", fontsize=10)
+        self.ax.legend(facecolor="white", edgecolor="black", labelcolor="black", fontsize=8)
         self.ax.grid(True, color='lightgray', linestyle='--', linewidth=0.5)
         
         # Redraw the canvas
