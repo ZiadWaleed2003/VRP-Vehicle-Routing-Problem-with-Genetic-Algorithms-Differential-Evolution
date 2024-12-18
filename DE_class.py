@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 class DE:
     # def __init__(self, num_customers, num_vehicles, capacity, population_size, max_generations=150, cr=0.5, f=0.5, locations = None, depot_coordinates=(0,0), customer_demands = None, max_x = 100, max_y = 100, max_demand = 20, early_stoppimg=50):
-    def __init__(self, num_customers, num_vehicles, capacity, f=0.5, depot_coordinates=(0,0), early_stopping = 50):
+    def __init__(self, customers , customers_demands , num_customers, num_vehicles, capacity, f=0.5, depot_coordinates=(0,0), early_stopping = 50):
         self.num_customers = num_customers
         self.num_vehicles = num_vehicles
         self.capacity = capacity
@@ -16,6 +16,8 @@ class DE:
         self.max_x = 100
         self.max_y = 100
         self.max_demand = capacity
+        self.locations = np.array(customers)
+        self.customer_demands = np.array(customers_demands)
 
         np.random.seed(42)
         if customer_demands is None :
