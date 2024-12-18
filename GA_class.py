@@ -113,7 +113,7 @@ class GA:
             if sum(customer_demands[c] for c in route) > self.vehicle_capacity:
                 total_distance += 100  # Large penalty for infeasibility
 
-        return 1 / (1 + total_distance)  # Invert distance for maximization
+        return total_distance  
 
     def select_parents(self, fitness_scores, population):
         """
@@ -261,7 +261,7 @@ class GA:
             unique_population = list({str(sol): sol for sol in new_population}.values())
             population = unique_population[:self.population_size]
 
-            current_fitness = max([self.fitness_function(sol, self.customer_demands) for sol in population])
+            current_fitness = min([self.fitness_function(sol, self.customer_demands) for sol in population])
             print(f"Generation {gen + 1}, Best Fitness: {current_fitness}")
 
             pop_collec.append(population)
@@ -285,11 +285,12 @@ class GA:
 
 
 
-        idx = fitness_collec.index(max(fitness_collec))
+        idx = fitness_collec.index(min(fitness_collec))
         best_gen = pop_collec[idx]
         best_fitness = fitness_collec[idx]
 
-        best_solution = max(best_gen, key=lambda sol: self.fitness_function(sol, self.customer_demands))
+        best_solution = min(best_gen, key=lambda sol: self.fitness_function(sol, self.customer_demands))
+        print(f"returning the fitness value of gen : {idx+1}")
 
         return best_solution , best_fitness , idx
 
