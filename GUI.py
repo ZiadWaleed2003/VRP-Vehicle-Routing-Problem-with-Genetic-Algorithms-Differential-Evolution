@@ -158,7 +158,25 @@ class VehicleRoutingOptimizer:
             best_solution, best_fitness, fitness_history = de.differential_evolution(output=True)
             self.fitness_text = best_fitness
 
-            # self.plot_routes(best_sol , customers=customers , depot = depot_location )
+            best_sol = []
+            
+            for value in best_solution:
+                if value == 0:
+                    # Add a new row when a zero is encountered
+                    result.append([])
+                else:
+                    # Add the value to the last row
+                    if result:  # Ensure there's at least one row to append to
+                        result[-1].append(value)
+                    else:
+                        result.append([value])  # Handle the case when the array starts with non-zero
+
+            # Remove the first and last rows
+            if len(result) > 1:  # Ensure there are at least two rows
+                result = result[:-1]
+
+
+            self.plot_routes(best_sol , customers=customers , depot = depot_location )
 
 
             print(f"Best solution: {best_solution}")
