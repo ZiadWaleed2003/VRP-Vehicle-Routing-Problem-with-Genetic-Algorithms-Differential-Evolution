@@ -15,7 +15,7 @@ class VehicleRoutingOptimizer:
         self.app.resizable(False, False)
         self.app.configure(bg="#0E0E0E")
         self.algo_selected = None
-
+        self.fitness_text = None
         # Set up layout frames
         self.left_frame = Frame(self.app, width=1100, height=900, bg="#1E1E1E")
         self.left_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
@@ -63,6 +63,9 @@ class VehicleRoutingOptimizer:
         algorithm_label = Label(self.right_frame, text="Algorithm", bg="#1E1E1E", fg="white", font=("Helvetica", 14))
         algorithm_label.pack(pady=(20, 10))
         self.selected_algorithm = IntVar()
+        self.fitness_label = Label(self.right_frame, text="Fitness Function Value: N/A", bg="#1E1E1E", fg="white", font=("Helvetica", 12))
+        self.fitness_label.pack(pady=(25, 15))
+
         ga_radio = Radiobutton(self.right_frame, text="Genetic Algorithm", variable=self.selected_algorithm, value=1, 
                                 bg="#1E1E1E", fg="white", selectcolor="#1E1E1E", font=("Helvetica", 12) , command=self.GA_selected)
         ga_radio.pack(pady=10)
@@ -94,11 +97,7 @@ class VehicleRoutingOptimizer:
                             activeforeground="white", font=("Helvetica", 14), width=20, height=2)
         run_button.pack(pady=(30, 20))
 
-    # def generate_random_data(self, num_customers):
-    #     customers = {i: (random.randint(0, 100), random.randint(0, 100)) for i in range(1, num_customers + 1)}
-    #     customer_demands = {i: random.randint(1, 10) for i in range(1, num_customers + 1)}
-
-    #     return customers, customer_demands
+   
 
     def run_optimization(self):
         # Validate inputs
@@ -135,9 +134,10 @@ class VehicleRoutingOptimizer:
             )
                 
             best_sol , best_fitness , idx = ga.evolve()
+            self.fitness_text = best_fitness
 
             # Plot the routes
-            self.plot_routes(best_sol , customers=customers , depot = depot_location)
+            self.plot_routes(best_sol , customers=customers , depot = depot_location )
         else:
             # DE main function here
             print('Place holder')
@@ -163,7 +163,10 @@ class VehicleRoutingOptimizer:
         # Customize the plot
         self.ax.legend(facecolor="white", edgecolor="black", labelcolor="black", fontsize=8)
         self.ax.grid(True, color='lightgray', linestyle='--', linewidth=0.5)
-        
+
+        fitness = f"Fitness Function Value: {self.fitness_text}"
+        self.fitness_label.config(text=fitness)
+
         # Redraw the canvas
         self.canvas.draw()
 
