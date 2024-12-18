@@ -1,275 +1,370 @@
 import numpy as np
-import random
+import matplotlib.pyplot as plt
 
-
-class DifferentialEvolution:
-    def __init__(self, num_of_customers, customers, num_vehicles, vehicle_capacity,
-                 depot_location, min_demand, max_demand, population_size, mutation_rate,
-                 crossover_prob, max_iterations):
-        
-        self.num_of_customers = num_of_customers
-        self.customers = customers 
+class DE:
+    # def __init__(self, num_customers, num_vehicles, capacity, population_size, max_generations=150, cr=0.5, f=0.5, locations = None, depot_coordinates=(0,0), customer_demands = None, max_x = 100, max_y = 100, max_demand = 20, early_stoppimg=50):
+    def __init__(self, num_customers, num_vehicles, capacity, f=0.5, depot_coordinates=(0,0), early_stopping = 50):
+        self.num_customers = num_customers
         self.num_vehicles = num_vehicles
-        self.vehicle_capacity = vehicle_capacity
-        self.depot_location = depot_location
-        self.min_demand = min_demand
-        self.max_demand = max_demand
-        self.population_size = population_size
-        self.mutation_rate = mutation_rate
-        self.crossover_prob = crossover_prob
-        self.max_iterations = max_iterations
-        self.population = self._initialize_population()
+        self.capacity = capacity
+        self.f = f
+        self.early_stopping = early_stopping
         
-    def _initialize_population(self):
-        """
-        Initialize population with customer indices distributed randomly across vehicles,
-        ensuring vehicle capacity constraints are respected.
-        """
-        population = []
+        self.cr = 0.1
+        self.population_size = 20
+        self.max_generations = 100
+        self.max_x = 100
+        self.max_y = 100
+        self.max_demand = capacity
+
+        np.random.seed(42)
+        if customer_demands is None :
+          self.customer_demands = np.random.rand(num_customers) * self.max_demand
+        else:
+          self.customer_demands = customer_demands
         
-        for _ in range(self.population_size):
-            # Randomly shuffle customer indices
-            customer_indices = list(range(self.num_of_customers))
-            random.shuffle(customer_indices)
+        self.customer_demands = np.concatenate(([0], self.customer_demands))
+        
 
-            # Split customers into vehicles while respecting capacity
-            routes = [[] for _ in range(self.num_vehicles)]
-            vehicle_loads = [0] * self.num_vehicles  # Track current load per vehicle
+        if locations is None:
+          self.locations = np.random.rand(num_customers, 2)
+          self.locations[:, 0] *= self.max_x  # Multiply first column by max_x
+          self.locations[:, 1] *= self.max_y  # Multiply second column by max_y
+        else:
+          self.locations = locations
+        
+        self.locations = np.concatenate(([depot_coordinates[0:]], self.locations), axis=0) # Pass the values as an array
 
-            for idx in customer_indices:
-                customer_demand = self.customers[idx]['demand']
-                # Find a vehicle that can accommodate this customer
-                valid_vehicles = [
-                    v for v in range(self.num_vehicles)
-                    if vehicle_loads[v] + customer_demand <= self.vehicle_capacity
-                ]
+        
+        # print(self.locations)
+        # print(self.customer_demands)
+        # exit()
 
-                if valid_vehicles:
-                    # Assign the customer to a random valid vehicle
-                    vehicle = random.choice(valid_vehicles)
-                    routes[vehicle].append(idx)
-                    vehicle_loads[vehicle] += customer_demand
-                else:
-                    # Handle customers that cannot fit into any vehicle (e.g., excessive demand)
-                    raise ValueError(f"Customer {idx} with demand {customer_demand} exceeds vehicle capacity constraints.")
+        self.distances = self.calculate_distances()
 
-            population.append(routes)
+
+    def calculate_distances(self):
+        distances = np.zeros((self.num_customers + 1, self.num_customers + 1))
+        for i in range(self.num_customers + 1):
+            for j in range(i + 1, self.num_customers + 1):
+                distances[i, j] = np.linalg.norm(self.locations[i] - self.locations[j])
+                distances[j, i] = distances[i, j]
+        return distances
+
+    def check_validity(self, trial_solution):
+        valid_solution = 0
+        start_position = 0
+        temp = trial_solution[trial_solution != 0].copy()
+        unique = np.unique(temp)
+        if len(unique) != len(temp):
+            valid_solution += 1
+        elif trial_solution.max() > self.num_customers:
+            valid_solution += 1
+        elif trial_solution.min() < 0:
+            valid_solution += 1
+        else:
+            for _ in range(self.num_vehicles):
+                route_start = None
+                route_end = None
+                count = 0
+                for l in range(start_position, self.num_customers + self.num_vehicles + 1):
+                    if trial_solution[l] == 0 and route_start is None:
+                        route_start = l
+                    elif trial_solution[l] == 0 and route_start is not None:
+                        route_end = l
+                        break
+                    else:
+                        count += 1
+                if route_start is None or route_end is None or count == 0:
+                    valid_solution += 1
+                route = trial_solution[route_start:route_end+1]
+                if np.sum(np.fromiter([self.customer_demands[i] for i in route[route != 0]], float)) > self.capacity:
+                    valid_solution += 1
+                start_position = route_end
+            if start_position != len(trial_solution) - 1:
+                valid_solution += 1
+        return valid_solution
+
+    def fitness(self, solution):
+        total_distance = 0
+        routes = np.split(solution, np.where(solution == 0)[0])
+        routes = [r for r in routes if len(r) > 0]
+        for r in routes:
+            r = np.concatenate((r, [0]))
+            route_distance = 0
+            for i in range(len(r) - 1):
+                if r[i] < len(self.distances) and r[i] >= 0 and r[i+1] < len(self.distances) and r[i+1] >= 0:
+                    route_distance += self.distances[r[i]][r[i + 1]]
+            total_distance += route_distance
+
+        valid_solution = self.check_validity(solution)
+        total_distance += ((np.sum(self.distances) * len(self.distances)) / np.count_nonzero(self.distances)) * valid_solution
+
+        return total_distance
+
+    def generate_population(self):
+        population = np.zeros((self.population_size, self.num_customers), dtype=int)
+        for i in range(self.population_size):
+            population[i] = np.arange(1, self.num_customers + 1)
+
+        vehicles = np.zeros((self.population_size, self.num_vehicles - 1), dtype=int)
+        population = np.concatenate((population, vehicles), axis=1)
+
+        for solution in population:
+            np.random.shuffle(solution)
+        zeros = np.zeros((self.population_size, 1), dtype=int)
+
+        population = np.concatenate((population, zeros), axis=1)
+        population = np.concatenate((zeros, population), axis=1)
 
         return population
 
-    def fitness_function(self, routes):
-            """
-            Fitness function: Total distance of all routes.
-            """
-            total_distance = 0
+    def perform_mutation(self, population, current_idx):
+        a_idx, b_idx, c_idx = np.random.choice(self.population_size, size=3, replace=False)
+        a, b, c = population[a_idx], population[b_idx], population[c_idx]
 
-            for route in routes:
-                if len(route) == 0:
-                    continue
+        current_pop = population[current_idx].copy()
+        current_pop = np.delete(current_pop, [0])
+        current_pop = np.delete(current_pop, [-1])
 
-                current_location = np.array(self.depot_location)
-                for customer_id in route:
-                    customer_coords = np.array(self.customers[customer_id]['location'])
-                    total_distance += np.linalg.norm(customer_coords - current_location)
-                    current_location = customer_coords
+        trial_solution = np.zeros(len(current_pop), dtype=int)
+        chosen = np.random.randint(self.num_customers + self.num_vehicles - 2)
+        values = np.arange(self.num_customers + self.num_vehicles - 2)
+        count = 0
+        swapped = []
+        for k in range(len(current_pop)):
+            if k not in swapped:
+                if np.random.rand() <= self.cr or k == chosen:
+                    if len(values) != 0:
+                        value_index = int((a[k] + self.f * (b[k] - c[k])) % (len(values)))
+                    else:
+                        break
+                    swap_index = values[value_index]
+                    trial_solution[k] = current_pop[swap_index]
+                    trial_solution[swap_index] = current_pop[k]
+                    swapped.append(swap_index)
+                    swapped.append(k)
+                    values = np.delete(values, value_index)
+                    values = np.delete(values, np.where(values == k))
+                else:
+                    trial_solution[k] = current_pop[k]
 
-                total_distance += np.linalg.norm(current_location - np.array(self.depot_location))
+        trial_solution = np.concatenate(([0], trial_solution))
+        trial_solution = np.concatenate((trial_solution, [0]))
+        return trial_solution
 
-            return total_distance
-    
-    # def _check_capacity(self, route, customer_id):
-    #     """
-    #     Check if adding the customer to the route exceeds vehicle capacity.
-    #     """
-    #     current_demand = sum(self.customers[c]['demand'] for c in route)
-    #     new_demand = current_demand + self.customers[customer_id]['demand']
-    #     return new_demand <= self.vehicle_capacity
+    def update_population(self, population, current_idx, trial_solution, trial_fitness, best_fitness, best_solution):
+        if trial_fitness < self.fitness(population[current_idx]):
+            population[current_idx] = trial_solution
+            if trial_fitness < best_fitness:
+                best_fitness = trial_fitness
+                best_solution = trial_solution
+        return population, best_fitness, best_solution
 
-    # def mutation(self, target_idx):
-    #     """
-    #     Mutation function: Generates a mutant vector.
-        
-    #     Parameters:
-    #     - target_idx: Index of the target individual in the population to mutate.
+    def differential_evolution(self, print_iter=0, output=False):
+        population = self.generate_population()
 
-    #     Returns:
-    #     - mutant: Mutated individual as a list of routes.
-    #     """
-    #     # Select three distinct individuals from the population excluding the target
-    #     candidates = list(range(self.population_size))
-    #     candidates.remove(target_idx)
-    #     r1, r2, r3 = random.sample(candidates, 3)
+        best_fitness = np.inf
+        for solution in population:
+            fitness = self.fitness(solution)
+            if fitness < best_fitness:
+                best_fitness = fitness
+                best_solution = solution
 
-    #     # Extract the routes of the selected individuals
-    #     routes_r1 = self.population[r1]
-    #     routes_r2 = self.population[r2]
-    #     routes_r3 = self.population[r3]
+        fitness_history = []
+        for i in range(self.max_generations):
+            for j in range(self.population_size):
+                trial_solution = self.perform_mutation(population.copy(), j)
+                trial_fitness = self.fitness(trial_solution)
 
-    #     # Create a mutant by combining routes using the mutation formula
-    #     mutant = []
-    #     for v in range(self.num_vehicles):  # Iterate over vehicles
-    #         # Ensure each route has the same length before vector math
-    #         max_len = max(len(routes_r1[v]), len(routes_r2[v]), len(routes_r3[v]))
-    #         r1_vec = np.pad(routes_r1[v], (0, max_len - len(routes_r1[v])), constant_values=-1)
-    #         r2_vec = np.pad(routes_r2[v], (0, max_len - len(routes_r2[v])), constant_values=-1)
-    #         r3_vec = np.pad(routes_r3[v], (0, max_len - len(routes_r3[v])), constant_values=-1)
+                population, best_fitness, best_solution = self.update_population(
+                    population, j, trial_solution, trial_fitness, best_fitness, best_solution
+                )
 
-    #         # Apply the mutation formula
-    #         mutant_vec = r1_vec + self.mutation_rate * (r2_vec - r3_vec)
-            
-    #         # Remove padding and invalid indices
-    #         mutant_route = [int(customer) for customer in mutant_vec if 0 <= customer < self.num_of_customers]
-            
-    #         mutant.append(mutant_route)
+            fitness_history.append(best_fitness)
+            if output and i % 10**print_iter == 0:
+                print(f"Generation {i + 1}/{self.max_generations}: Best fitness = {best_fitness}")
 
-    #     return mutant
-
-    def mutation(self, target_idx, F=0.8):
-        """
-        Mutation function: Generate a mutant vector using DE logic.
-        Ensures no duplicates, respects capacity constraints, and uses the mutation rate (F).
-        """
-        candidates = list(range(self.population_size))
-        candidates.remove(target_idx)
-        r1, r2, r3 = random.sample(candidates, 3)
-
-        # Base vector
-        base = self.population[r1]
-        mutant = [[] for _ in range(self.num_vehicles)]
-
-        # Compute mutation for each vehicle
-        for v in range(self.num_vehicles):
-            route_r1 = set(base[v])
-            route_r2 = set(self.population[r2][v])
-            route_r3 = set(self.population[r3][v])
-
-            # Difference vector scaled by F
-            difference = route_r2.symmetric_difference(route_r3)  # Compute (r2 - r3) as a symmetric difference
-            difference_list = list(difference)  # Convert to list for random sampling
-            scaled_difference = set(random.sample(difference_list, int(len(difference_list) * F)))  # Apply F scaling
-
-            # Mutated route: r1 + scaled difference
-            mutated_route = route_r1.union(scaled_difference)
-
-            # Filter customers to ensure capacity constraints
-            capacity_used = 0
-            valid_route = []
-            for customer in mutated_route:
-                customer_demand = self.customers[customer]['demand']
-                if capacity_used + customer_demand <= self.vehicle_capacity:
-                    valid_route.append(customer)
-                    capacity_used += customer_demand
-
-            mutant[v] = valid_route
-
-        # Ensure all customers are included and no duplicates
-        unassigned_customers = set(range(self.num_of_customers)) - set(c for route in mutant for c in route)
-        for customer in unassigned_customers:
-            for v in range(self.num_vehicles):
-                customer_demand = self.customers[customer]['demand']
-                current_load = sum(self.customers[c]['demand'] for c in mutant[v])
-                if current_load + customer_demand <= self.vehicle_capacity:
-                    mutant[v].append(customer)
-                    break
-
-        return mutant
+        return best_solution, best_fitness, fitness_history
 
 
-    
-    def crossover(self, target, mutant):
-        """
-        Crossover function: Combine target and mutant based on crossover probability.
-        """
-        trial = []
-        for t_route, m_route in zip(target, mutant):
-            trial_route = []
-            for customer in t_route + m_route:
-                if random.random() < self.crossover_prob and customer not in trial_route:
-                    trial_route.append(customer)
-            trial.append(trial_route)
 
-        return trial
-    
-    def selection(self, target, trial):
-        """
-        Selection function: Select the better of target and trial based on fitness.
-        """
-        target_fitness = self.fitness_function(target)
-        trial_fitness = self.fitness_function(trial)
-        return trial if trial_fitness < target_fitness else target
-
-
-    def evolve(self):
-        """
-        Evolve function: Run the DE algorithm to find the best solution.
-        """
-        for iteration in range(self.max_iterations):
-            new_population = []
-            for i in range(self.population_size):
-                target = self.population[i]
-                mutant = self.mutation(i)
-                trial = self.crossover(target, mutant)
-                new_individual = self.selection(target, trial)
-                new_population.append(new_individual)
-
-            self.population = new_population
-            best_solution = min(self.population, key=self.fitness_function)
-            print(f"Iteration {iteration + 1}: Best Fitness = {self.fitness_function(best_solution)}")
-
-        return best_solution
-
-    def run(self):
-        """
-        Run the full DE process, encapsulating evolution and returning the best result.
-        """
-        print("Starting Differential Evolution...")
-        self.evolve()
-        # Find the best solution in the population
-        best_solution = min(self.population, key=self.fitness_function)
-        best_fitness = self.fitness_function(best_solution)
-
-        print(f"Best fitness achieved: {best_fitness}")
-        print("Best solution routes:")
-        for route in best_solution:
-            print(route)
-        
-        return best_solution, best_fitness
-    
-
+# Example usage
 if __name__ == "__main__":
-    # Parameters
-    num_vehicles = 3
-    vehicle_capacity = 10
-    depot_location = (0, 0)
-    population_size = 5
-    mutation_rate = 0.8  # F: Mutation factor
-    crossover_prob = 0.7  # CR: Crossover probability
-    max_iterations = 50
-    min_demand = 1
-    max_demand = 5
-    num_of_customers = 6
+    
+    num_customers = int(input("Enter the number of customers: "))
+    num_vehicles = int(input("Enter the number of vehicles: "))
+    capacity = int(input("Enter the vehicle capacity: "))
+    DE_F = float(input("Enter the scaling factor (f): "))
+    early_stopping = int(input("Enter the early stopping value: "))
+    # max_demand = capacity    
+    # max_x = 30
+    # max_y = 30
+    # population_size = int(input("Enter the population size: "))
+    # max_generations = int(input("Enter the maximum number of generations: "))
+    # DE_CR = float(input("Enter the crossover rate (cr): "))
 
-    # Test customer data
-    customers = {
-        0: {'location': (2, 3), 'demand': 2},
-        1: {'location': (5, 4), 'demand': 3},
-        2: {'location': (8, 1), 'demand': 4},
-        3: {'location': (1, 7), 'demand': 5},
-        4: {'location': (7, 8), 'demand': 1},
-        5: {'location': (3, 3), 'demand': 2}
-    }
+    while True:
+      try:
+          depot_x, depot_y = map(float, input("Enter depot coordinates (x, y): ").split(","))
+          if depot_x >= 0 and depot_y >= 0:
+              depot_coordinates = (depot_x, depot_y)
+              break
+          else:
+              print("Depot coordinates must be non-negative. Please try again.")
+      except ValueError:
+          print("Invalid input format. Please enter coordinates as x,y.")
 
-    # Initialize Differential Evolution Solver
-    solver = DifferentialEvolution(
-        num_of_customers, customers, num_vehicles, vehicle_capacity, depot_location,
-        min_demand, max_demand, population_size, mutation_rate, crossover_prob, max_iterations
+
+    locations = None
+    # enter_locations = input("Do you want to enter customer locations? (yes/no): ")
+    enter_locations = "no"
+
+    if enter_locations[0].lower() == "y":
+            locations = list()
+
+            print("Enter customer locations (x, y coordinates):")
+            print(f"# X range: [0 .. {max_x}]")
+            print(f"# Y range: [0 .. {max_y}]")
+            for i in range(num_customers):
+                while True:
+                    try:
+                        x, y = map(float, input(f"Customer {i + 1}: ").split(","))
+                        if x >= 0 and x <= max_x and y >= 0 and y <= max_y:
+                            locations.append([x, y])  # Append to locations list
+                            break
+                        else:
+                            print(f"Demand value must be in valid range x[0 .. {max_x}]  y[0 .. {max_y}]. Please try again.")
+                    except ValueError:
+                        print("Invalid input format. Please enter coordinates as x,y.")
+
+            locations = np.array(locations)  # Convert to NumPy array
+
+
+
+    customer_demands = None
+    # enter_locations = input("Do you want to enter customer demands? (yes/no): ")
+    enter_locations = "no"
+
+    if enter_locations[0].lower() == "y":
+            customer_demands = list()
+
+            print("Enter customer demans as an ( numerical value ):")
+            print(f"# demands range: (0 .. {max_demand}]")
+
+            for i in range(num_customers):
+                while True:
+                    try:
+                        x = float(input(f"Customer {i + 1}: "))
+                        if x > 0 and x <= max_demand:
+                            customer_demands.append(x)  # Append to locations list
+                            break
+                        else:
+                            print(f"Demand value must be in valid range (0 .. {max_demand}]. Please try again.")
+                    except ValueError:
+                        print("Invalid input format. Please try again a numerical value")
+
+            customer_demands = np.array(customer_demands)  # Convert to NumPy array
+    
+    if customer_demands is not None and np.any(customer_demands) > capacity:
+        print("Error: Customer demands cannot exceed the vehicle capacity.")
+        exit()
+
+    
+    de = DE(
+        num_customers       = num_customers,
+        num_vehicles        = num_vehicles,
+        capacity            = capacity,
+        f                   = DE_F,
+        depot_coordinates   = depot_coordinates,
+        early_stopping      = early_stopping
+        # population_size     = population_size,
+        # max_generations     = max_generations,
+        # cr                  = DE_CR,
+        # locations           = locations,
+        # customer_demands    = customer_demands,
+        # max_x               = max_x,
+        # max_y               = max_y,
+        # max_demand          = max_demand
     )
 
-    # Run the solver
-    best_solution, best_fitness = solver.run()
+    best_solution, best_fitness, fitness_history = de.differential_evolution(output=True)
 
-    # Output best solution
-    print("\nFinal Best Solution:")
-    print(f"Fitness: {best_fitness}")
-    for i, route in enumerate(best_solution):
-        print(f"Vehicle {i+1}: {route}")
+    if locations is None:
+      locations = de.locations
+
+    print(f"Best solution: {best_solution}")
+    print(f"Best fitness: {best_fitness}")
+
+    plt.plot(fitness_history)
+    plt.xlabel("Generation")
+    plt.ylabel("Fitness")
+    plt.title("Fitness History")
+    plt.show()
+    
+
+######################################
+## Graphical representation 
+######################################
+
+import matplotlib as mpl
+from matplotlib.patches import Patch
+
+def plot_cvrp_solution(locations, solution):
+    
+    # # Define a color map to use for the routes
+    cmap = mpl.colormaps['hsv']
+
+    # # Create a dictionary to store the colors for each route
+    color_dict = {}
+    
+    # # Create a plot and set the plot size
+    fig, ax = plt.subplots(figsize=(10, 10))
+    
+    # # Plot the customer locations
+    ax.scatter([loc[0] for loc in locations], [loc[1] for loc in locations], s=100, color='black')
+
+    # # Get the solution vehicle routes
+    routes = np.split(solution, np.where(solution == 0)[0])
+    routes.pop(0)
+    routes.pop(-1)
+    
+    # # Plot the solution routes
+    for i in range(len(routes)):
+        route = routes[i]
+        route = np.concatenate((route, [0]))
+
+        print(route)
+
+        color = cmap(i / len(routes))
+        
+        # # Create a line plot for the route
+        ax.plot([locations[x][0] for x in route], [locations[x][1] for x in route], color=color, linewidth=3, label=f'Vehicle {i}')
+
+        color_dict[f"Route {i}"] = color
+        
+    
+    # # Set the axis limits and labels
+    ax.set_xlim([0, max([loc[0] for loc in locations]) * 1.1])
+    ax.set_ylim([0, max([loc[1] for loc in locations]) * 1.1])
+    ax.set_xlabel('X Coordinate')
+    ax.set_ylabel('Y Coordinate')
+    
+    # # Set the title
+    ax.set_title(f'CVRP Solution ({num_customers} Customers, {num_vehicles} Vehicles, Capacity {capacity})')
+
+    # # Create a legend for the solution routes
+    legend_handles = [Patch(facecolor=color_dict[label], label=label) for label in color_dict.keys()]
+
+    # # Define the coordinates for the legend box
+    legend_x = 1
+    legend_y = 0.5
+    
+    # # Place the legend box outside of the graph area
+    plt.legend(handles=legend_handles, bbox_to_anchor=(legend_x, legend_y), loc='center left', title='Routes')
+    
+    # # Show the plot
+    plt.show()
+
+# # Plot graph with solution
+plot_cvrp_solution(locations, best_solution)
