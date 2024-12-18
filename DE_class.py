@@ -2,21 +2,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class DE:
-    def __init__(self, num_customers, num_vehicles, capacity, population_size, max_generations=150, cr=0.5, f=0.5, locations = None, depot_coordinates=(0,0), customer_demands = None, max_x = 30, max_y = 30, max_demand = 20):
+    # def __init__(self, num_customers, num_vehicles, capacity, population_size, max_generations=150, cr=0.5, f=0.5, locations = None, depot_coordinates=(0,0), customer_demands = None, max_x = 100, max_y = 100, max_demand = 20, early_stoppimg=50):
+    def __init__(self, num_customers, num_vehicles, capacity, f=0.5, depot_coordinates=(0,0), early_stopping = 50):
         self.num_customers = num_customers
         self.num_vehicles = num_vehicles
         self.capacity = capacity
-        self.population_size = population_size
-        self.max_generations = max_generations
-        self.cr = cr
         self.f = f
-        # self.max_x = max_x
-        # self.max_y = max_y
-        # self.max_demand = max_demand
+        self.early_stopping = early_stopping
+        
+        self.cr = 0.1
+        self.population_size = 20
+        self.max_generations = 100
+        self.max_x = 100
+        self.max_y = 100
+        self.max_demand = capacity
 
         np.random.seed(42)
         if customer_demands is None :
-          self.customer_demands = np.random.rand(num_customers) * max_demand
+          self.customer_demands = np.random.rand(num_customers) * self.max_demand
         else:
           self.customer_demands = customer_demands
         
@@ -25,17 +28,17 @@ class DE:
 
         if locations is None:
           self.locations = np.random.rand(num_customers, 2)
-          self.locations[:, 0] *= max_x  # Multiply first column by max_x
-          self.locations[:, 1] *= max_y  # Multiply second column by max_y
+          self.locations[:, 0] *= self.max_x  # Multiply first column by max_x
+          self.locations[:, 1] *= self.max_y  # Multiply second column by max_y
         else:
           self.locations = locations
         
         self.locations = np.concatenate(([depot_coordinates[0:]], self.locations), axis=0) # Pass the values as an array
 
         
-        print(self.locations)
-        print(self.customer_demands)
-        exit()
+        # print(self.locations)
+        # print(self.customer_demands)
+        # exit()
 
         self.distances = self.calculate_distances()
 
@@ -192,13 +195,14 @@ if __name__ == "__main__":
     num_customers = int(input("Enter the number of customers: "))
     num_vehicles = int(input("Enter the number of vehicles: "))
     capacity = int(input("Enter the vehicle capacity: "))
-    population_size = int(input("Enter the population size: "))
-    max_generations = int(input("Enter the maximum number of generations: "))
-    DE_CR = float(input("Enter the crossover rate (cr): "))
     DE_F = float(input("Enter the scaling factor (f): "))
-    max_x = 30
-    max_y = 30
-    max_demand = capacity    
+    early_stopping = int(input("Enter the early stopping value: "))
+    # max_demand = capacity    
+    # max_x = 30
+    # max_y = 30
+    # population_size = int(input("Enter the population size: "))
+    # max_generations = int(input("Enter the maximum number of generations: "))
+    # DE_CR = float(input("Enter the crossover rate (cr): "))
 
     while True:
       try:
@@ -213,7 +217,8 @@ if __name__ == "__main__":
 
 
     locations = None
-    enter_locations = input("Do you want to enter customer locations? (yes/no): ")
+    # enter_locations = input("Do you want to enter customer locations? (yes/no): ")
+    enter_locations = "no"
 
     if enter_locations[0].lower() == "y":
             locations = list()
@@ -238,7 +243,8 @@ if __name__ == "__main__":
 
 
     customer_demands = None
-    enter_locations = input("Do you want to enter customer demands? (yes/no): ")
+    # enter_locations = input("Do you want to enter customer demands? (yes/no): ")
+    enter_locations = "no"
 
     if enter_locations[0].lower() == "y":
             customer_demands = list()
@@ -265,18 +271,18 @@ if __name__ == "__main__":
         exit()
 
     
-    de = DE_CLASS(
+    de = DE(
         num_customers       = num_customers,
         num_vehicles        = num_vehicles,
         capacity            = capacity,
-        population_size     = population_size,
-        max_generations     = max_generations,
-        cr                  = DE_CR,
         f                   = DE_F,
         depot_coordinates   = depot_coordinates,
-        locations           = locations,
-        customer_demands    = customer_demands
-        # ,
+        early_stopping      = early_stopping
+        # population_size     = population_size,
+        # max_generations     = max_generations,
+        # cr                  = DE_CR,
+        # locations           = locations,
+        # customer_demands    = customer_demands,
         # max_x               = max_x,
         # max_y               = max_y,
         # max_demand          = max_demand
