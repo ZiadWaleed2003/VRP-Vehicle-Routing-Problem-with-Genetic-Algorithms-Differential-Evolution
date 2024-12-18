@@ -3,6 +3,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import numpy as np
 from GA_class import GA
+from DE_class import DE
 import random
 
 
@@ -138,8 +139,33 @@ class VehicleRoutingOptimizer:
 
             # Plot the routes
             self.plot_routes(best_sol , customers=customers , depot = depot_location )
-        else:
+        
+        elif self.algo_selected == 'DE':
+
+            customers = {i: (random.randint(0, 100), random.randint(0, 100)) for i in range(1, num_customers + 1)}
+            customer_demands = {i: random.randint(1, 10) for i in range(1, num_customers + 1)}
+
             # DE main function here
+            de = DE(
+                    num_customers       = num_customers,
+                    num_vehicles        = num_vehicles,
+                    capacity            = vehicle_capacity,
+                    f                   = mutation_rate,
+                    depot_coordinates   = depot_location,
+                    early_stopping      = early_stopping
+                )
+            
+            best_solution, best_fitness, fitness_history = de.differential_evolution(output=True)
+            self.fitness_text = best_fitness
+
+            # self.plot_routes(best_sol , customers=customers , depot = depot_location )
+
+
+            print(f"Best solution: {best_solution}")
+            print(f"Best fitness: {best_fitness}")
+
+        else:
+
             print('Place holder')
 
 
