@@ -113,13 +113,6 @@ class VehicleRoutingOptimizer:
             messagebox.showerror("Input Error", "Please enter valid numeric values")
             return
 
-        # # Placeholder optimization result
-        # best_solution = [
-        #     [1, 3, 5],  # Route 1
-        #     [2, 4]      # Route 2
-        # ]
-        
-        # cst , cst_demands = self.generate_random_data(num_customers)
         random.seed(42)
         np.random.seed(42)
 
@@ -144,13 +137,13 @@ class VehicleRoutingOptimizer:
             best_sol , best_fitness , idx = ga.evolve()
 
             # Plot the routes
-            self.plot_routes(best_sol , customers=customers)
+            self.plot_routes(best_sol , customers=customers , depot = depot_location)
         else:
             # DE main function here
             print('Place holder')
 
 
-    def plot_routes(self, routes , customers):
+    def plot_routes(self, routes , customers , depot):
         # Clear previous plot
         self.ax.clear()
         self.ax.set_title("Vehicle Routes", color="black", fontsize=16)
@@ -160,10 +153,12 @@ class VehicleRoutingOptimizer:
         plt.figure(figsize=(10,10))
         for route in routes:
             x, y = [customers[c][0] for c in route], [customers[c][1] for c in route]
-            self.ax.plot([0] + x + [0], [0] + y + [0], marker='o', label=f"Route {route}")
+            # Use depot coordinates instead of [0,0]
+            self.ax.plot([depot[0]] + x + [depot[0]], [depot[1]] + y + [depot[1]], 
+                        marker='o', label=f"Route {route}")
 
         # Plot depot
-        self.ax.scatter(self.depot[0], self.depot[1], color='red', s=200, marker='s', label='Depot')
+        self.ax.scatter(depot[0], depot[1], color='red', s=200, marker='s', label='Depot')
 
         # Customize the plot
         self.ax.legend(facecolor="white", edgecolor="black", labelcolor="black", fontsize=8)
