@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 class DE:
     # def __init__(self, num_customers, num_vehicles, capacity, population_size, max_generations=150, cr=0.5, f=0.5, locations = None, depot_coordinates=(0,0), customer_demands = None, max_x = 100, max_y = 100, max_demand = 20, early_stoppimg=50):
-    def __init__(self, customers , customers_demands , num_customers, num_vehicles, capacity, f=0.5, depot_coordinates=(0,0), early_stopping = 50):
+    def __init__(self , num_customers, num_vehicles, capacity, f=0.5, depot_coordinates=(0,0), early_stopping = 50):
         self.num_customers = num_customers
         self.num_vehicles = num_vehicles
         self.capacity = capacity
@@ -16,24 +16,20 @@ class DE:
         self.max_x = 100
         self.max_y = 100
         self.max_demand = capacity
-        self.locations = np.array(customers)
-        self.customer_demands = np.array(customers_demands)
+        self.locations = None
+
 
         np.random.seed(42)
-        if customer_demands is None :
-          self.customer_demands = np.random.rand(num_customers) * self.max_demand
-        else:
-          self.customer_demands = customer_demands
+        self.customer_demands = np.random.rand(num_customers) * self.max_demand
+        
         
         self.customer_demands = np.concatenate(([0], self.customer_demands))
         
 
-        if locations is None:
-          self.locations = np.random.rand(num_customers, 2)
-          self.locations[:, 0] *= self.max_x  # Multiply first column by max_x
-          self.locations[:, 1] *= self.max_y  # Multiply second column by max_y
-        else:
-          self.locations = locations
+        self.locations = np.random.rand(num_customers, 2)
+        self.locations[:, 0] *= self.max_x  # Multiply first column by max_x
+        self.locations[:, 1] *= self.max_y  # Multiply second column by max_y
+        
         
         self.locations = np.concatenate(([depot_coordinates[0:]], self.locations), axis=0) # Pass the values as an array
 
@@ -187,7 +183,7 @@ class DE:
             if output and i % 10**print_iter == 0:
                 print(f"Generation {i + 1}/{self.max_generations}: Best fitness = {best_fitness}")
 
-        return best_solution, best_fitness, fitness_history
+        return best_solution, best_fitness, fitness_history , self.locations
 
 
 
