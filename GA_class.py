@@ -126,8 +126,10 @@ class GA:
         Returns:
         - parent1, parent2: Two selected solutions.
         """
-        total_fitness = sum(fitness_scores)
-        probabilities = [score / total_fitness for score in fitness_scores]
+       # Use inverse of distances as selection probabilities
+        max_distance = max(fitness_scores)
+        probabilities = [max_distance - score for score in fitness_scores]
+
         return random.choices(population, weights=probabilities, k=2)
 
     def order_crossover(self, parent1, parent2):
@@ -233,7 +235,7 @@ class GA:
         # Initialize population and customer demands
         population = self.initialize_population()
 
-        best_fitness = float('-inf')  # Track the best fitness score
+        best_fitness = float('inf')  # Track the best fitness score
         best_gen = None
         no_improvement_counter = 0  # Counter to track generations without improvement
         fitness_collec = []
@@ -267,7 +269,7 @@ class GA:
             pop_collec.append(population)
             fitness_collec.append(current_fitness)
 
-            if current_fitness > best_fitness:
+            if current_fitness < best_fitness:
 
                 best_fitness = current_fitness # change the best fitness to the current one
                 best_gen     = population
