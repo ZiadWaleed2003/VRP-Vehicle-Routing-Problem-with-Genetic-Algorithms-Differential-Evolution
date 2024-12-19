@@ -126,9 +126,9 @@ class GA:
         Returns:
         - parent1, parent2: Two selected solutions.
         """
-       # Use inverse of distances as selection probabilities
-        max_distance = max(fitness_scores)
-        probabilities = [max_distance - score for score in fitness_scores]
+       # Use distances as selection probabilities
+        min_distance = min(fitness_scores)
+        probabilities = [min_distance - score for score in fitness_scores]
 
         return random.choices(population, weights=probabilities, k=2)
 
@@ -271,7 +271,7 @@ class GA:
 
             if current_fitness < best_fitness:
 
-                best_fitness = current_fitness # change the best fitness to the current one
+                best_fitness = current_fitness 
                 best_gen     = population
                 no_improvement_counter = 0  # reset the counter
 
